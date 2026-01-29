@@ -43,7 +43,6 @@
             return `${now.toLocaleDateString('zh-TW')} ${days[now.getDay()]}`;
         }
 
-        // 監聽今日功課
         onSnapshot(doc(db, "configs", "today_homework"), (docSnap) => {
             if (docSnap.exists()) {
                 document.getElementById('hw-content').innerText = docSnap.data().content;
@@ -51,13 +50,11 @@
             }
         });
 
-        // 更新功課 (老師與學生共用)
         window.updateHW = async () => {
             const val = document.getElementById('hw-input').value;
             if(!val) return alert("請輸入內容");
             const oldContent = document.getElementById('hw-content').innerText;
             const oldDate = document.getElementById('hw-date').innerText;
-
             try {
                 await addDoc(collection(db, "history_homework"), {
                     date: oldDate,
@@ -70,10 +67,9 @@
                 });
                 document.getElementById('hw-input').value = '';
                 alert("黑板已成功更新！");
-            } catch(e) { alert("發布失敗：" + e); }
+            } catch(e) { alert("更新失敗"); }
         };
 
-        // 家長簽名儲存
         window.saveData = async () => {
             const sid = sel.value;
             if(!sid || pad.isEmpty()) return alert("請選取座號並簽名");
@@ -86,12 +82,11 @@
                     time: new Date().toLocaleTimeString(),
                     timestamp: Date.now()
                 });
-                alert("簽名儲存成功！");
+                alert("儲存成功！");
                 pad.clear();
             } catch(e) { alert("儲存失敗"); }
         };
 
-        // 查看之前功課 (摺疊功能)
         let isHistoryShow = false;
         window.toggleHistory = () => {
             const box = document.getElementById('history-box');
@@ -107,29 +102,26 @@
             }
         };
 
-        // --- 登入邏輯分流 ---
         window.loginAdmin = () => {
             const pw = prompt("請輸入管理密碼：");
             const adminPanel = document.getElementById('admin-panel');
             const teacherExtra = document.getElementById('teacher-extra');
 
             if (pw === "0904") {
-                // 老師權限：顯示全部
                 adminPanel.style.display = 'block';
                 teacherExtra.style.display = 'block';
                 initAdminListeners();
             } else if (pw === "0214") {
-                // 學生權限：只顯示發布功課，隱藏其餘
                 adminPanel.style.display = 'block';
                 teacherExtra.style.display = 'none';
-                alert("學生權限已登入：僅開放發布功課功能。");
+                // 學生登入後直接捲動到輸入區
+                adminPanel.scrollIntoView({ behavior: 'smooth' });
             } else {
                 alert("密碼錯誤！");
             }
         };
 
         function initAdminListeners() {
-            // 監聽歷史功課管理
             onSnapshot(query(collection(db, "history_homework"), orderBy("timestamp", "desc")), (snap) => {
                 document.getElementById('admin-history-manage').innerHTML = snap.docs.map(d => `
                     <div class="edit-card">
@@ -140,13 +132,11 @@
                     </div>
                 `).join('');
             });
-            // 監聽簽名
             onSnapshot(query(collection(db, "signatures"), orderBy("timestamp", "desc")), (snap) => {
                 const records = snap.docs.map(d => d.data());
                 const signedIds = records.map(r => parseInt(r.sid));
                 const unsigned = students.filter(s => !signedIds.includes(s.id));
                 document.getElementById('stats-area').innerHTML = `<div style="background:#fff1f1; padding:10px; border-radius:4px;">未簽名：${unsigned.length > 0 ? unsigned.map(s => s.name).join('、') : '全班已完成'}</div>`;
-                
                 document.getElementById('records-list').innerHTML = snap.docs.map(d => `
                     <div class="record-card">
                         <b>${d.data().sid}. ${d.data().name} (${d.data().time})</b><br>
@@ -161,10 +151,10 @@
         window.saveEditHW = async (id) => {
             const newContent = document.getElementById(`edit-${id}`).value;
             await updateDoc(doc(db, "history_homework", id), { content: newContent });
-            alert("歷史內容已修正");
+            alert("已修正");
         };
         window.deleteHW = async (id) => {
-            if(confirm("確定刪除歷史紀錄？")) await deleteDoc(doc(db, "history_homework", id));
+            if(confirm("確定刪除？")) await deleteDoc(doc(db, "history_homework", id));
         };
         window.deleteSig = async (id) => {
             if(confirm("確定刪除簽名？")) await deleteDoc(doc(db, "signatures", id));
@@ -225,11 +215,10 @@
     <div id="admin-panel" class="admin-area">
         <h3>管理後台</h3>
         <div style="margin-bottom:20px;">
-            <label>發布新功課 (輸入後黑板即更新)</label>
+            <label>發布新功課</label>
             <textarea id="hw-input" rows="3" style="width:100%; padding:10px;"></textarea>
             <button class="btn" style="background:#444;" onclick="updateHW()">更新黑板內容</button>
         </div>
-        
         <div id="teacher-extra">
             <hr>
             <h4>管理歷史功課</h4>
