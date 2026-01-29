@@ -1,69 +1,197 @@
-<div id="admin-panel" class="admin-area">
-    <h3>老師管理後台</h3>
-    
-    <div class="input-group">
-        <label>發布新功課</label>
-        <textarea id="admin-hw-input" rows="4" placeholder="請輸入今日功課內容..."></textarea>
-        <button class="btn" onclick="publishHomework()">發布並存檔</button>
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大吉國中 204 電子聯絡簿</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
+    <style>
+        :root { --muji-bg: #f2f0eb; --muji-stone: #e0dbd1; --muji-charcoal: #333333; --muji-accent: #8c8c8c; }
+        * { box-sizing: border-box; } /* 確保寬度計算正確，防止跑版 */
+        body { font-family: 'Noto Sans TC', sans-serif; background-color: var(--muji-bg); color: var(--muji-charcoal); margin: 0; padding: 15px; }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 4px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        h1, h2, h3, h4 { text-align: center; font-weight: 500; }
+        .school-info { font-size: 0.8em; color: var(--muji-accent); text-align: center; letter-spacing: 2px; margin-bottom: 5px; }
+        .section { border-bottom: 1px solid var(--muji-stone); padding: 20px 0; }
+        .homework-box { background: #fafafa; padding: 15px; border-radius: 4px; border-left: 5px solid var(--muji-accent); min-height: 60px; white-space: pre-wrap; margin-bottom: 10px; line-height: 1.6; }
+        .history-btn { background: none; border: 1px solid var(--muji-stone); color: var(--muji-accent); padding: 8px 15px; cursor: pointer; border-radius: 4px; font-size: 0.9em; width: 100%; }
+        
+        .input-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 8px; font-weight: 500; font-size: 0.95em; }
+        select, textarea { width: 100%; padding: 12px; border: 1px solid var(--muji-stone); border-radius: 4px; font-size: 16px; font-family: inherit; }
+        
+        /* 簽名板區域 */
+        .signature-wrapper { border: 1px solid var(--muji-stone); background: #fff; width: 100%; border-radius: 4px; position: relative; }
+        canvas { width: 100%; height: 200px; touch-action: none; display: block; }
+        
+        .btn { background-color: var(--muji-charcoal); color: white; border: none; padding: 14px; cursor: pointer; width: 100%; font-size: 16px; border-radius: 4px; margin-top: 10px; }
+        .btn:hover { opacity: 0.9; }
+
+        /* 老師端顯示卡片 */
+        .admin-area { display: none; background: #f9f9f9; padding: 15px; border: 1px solid var(--muji-stone); margin-top: 20px; border-radius: 4px; }
+        .record-card { background: white; border: 1px solid var(--muji-stone); padding: 15px; margin-bottom: 15px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .record-header { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 0.9em; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        .comment-display { background: #fdfdfd; padding: 10px; border-radius: 4px; border: 1px solid #f0f0f0; margin: 10px 0; font-size: 0.95em; }
+        .sig-image-box { text-align: center; background: #fff; border: 1px solid #f0f0f0; padding: 5px; }
+        .sig-image-box img { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+        .delete-btn { color: #d9534f; cursor: pointer; font-size: 0.85em; background: none; border: none; text-decoration: underline; margin-top: 10px; width: 100%; text-align: right; }
+        
+        .unsigned-box { background: #fff1f1; border: 1px solid #f5c6cb; color: #721c24; padding: 12px; border-radius: 4px; margin-bottom: 15px; font-size: 0.9em; line-height: 1.5; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="school-info">大吉國中 二年四班</div>
+    <h1>電子聯絡簿</h1>
+
+    <div class="section">
+        <h2 id="hw-title">今日功課</h2>
+        <div id="homework-display" class="homework-box">讀取中...</div>
+        <button class="history-btn" onclick="showHistory()">📂 查看之前功課</button>
     </div>
 
-    <hr>
-
-    <h4>今日家長簽名統計與留言</h4>
-    <div id="stats-display"></div>
-    
-    <div id="records-list" style="margin-top: 20px;">
+    <div class="section">
+        <h2>家長簽名</h2>
+        <div class="input-group">
+            <label>1. 選擇學生座號</label>
+            <select id="student-select">
+                <option value="">請點擊選擇</option>
+            </select>
         </div>
+        <div class="input-group">
+            <label>2. 想對老師說的話</label>
+            <textarea id="parent-comment" rows="2" placeholder="選填"></textarea>
+        </div>
+        <div class="input-group">
+            <label>3. 家長手寫簽名</label>
+            <div class="signature-wrapper">
+                <canvas id="signature-pad"></canvas>
+            </div>
+            <button onclick="signaturePad.clear()" style="font-size:12px; background:none; border:none; color:var(--muji-accent); text-decoration:underline; cursor:pointer; margin-top:5px;">清除重簽</button>
+        </div>
+        <button class="btn" onclick="saveData()">儲存簽名並送出</button>
+    </div>
+
+    <button onclick="authAdmin()" style="background:none; border:none; color:#ccc; width:100%; margin-top:60px; cursor:pointer; font-size:0.7em;">老師端管理登入</button>
+
+    <div id="admin-panel" class="admin-area">
+        <h3>老師管理後台</h3>
+        <div class="input-group">
+            <label>發布新功課</label>
+            <textarea id="admin-hw-input" rows="3" placeholder="請在此輸入今日功課..."></textarea>
+            <button class="btn" style="background:#666;" onclick="publishHomework()">發布並留存歷史</button>
+        </div>
+        <hr>
+        <h4>簽名統計與內容</h4>
+        <div id="stats-area"></div>
+        <div id="records-list">
+            </div>
+    </div>
 </div>
 
 <script>
-// 當老師登入後，呼叫此函數顯示所有家長的簽名內容
-function renderTeacherView(records) {
-    const listContainer = document.getElementById('records-list');
-    listContainer.innerHTML = ''; // 清空舊資料
+    const students = [
+        {id:1, name:"何睿信"}, {id:2, name:"陳柏翰"}, {id:3, name:"黃明璿"},
+        {id:4, name:"黃則善"}, {id:5, name:"黃暐翰"}, {id:6, name:"劉栢睿"},
+        {id:7, name:"林芊惠"}, {id:8, name:"段孟涵"}, {id:9, name:"洪煜晴"},
+        {id:10, name:"張育慈"}, {id:11, name:"許令霏"}, {id:12, name:"廖以晨"},
+        {id:13, name:"劉晏妤"}
+    ];
 
-    if (records.length === 0) {
-        listContainer.innerHTML = '<p style="text-align:center; color:gray;">目前尚無家長簽名</p>';
-        return;
+    // 初始化下拉選單
+    const sel = document.getElementById('student-select');
+    students.forEach(s => sel.innerHTML += `<option value="${s.id}">${s.id}. ${s.name}</option>`);
+
+    // 初始化簽名板
+    const canvas = document.getElementById('signature-pad');
+    const signaturePad = new SignaturePad(canvas);
+    
+    // 自動調整畫布大小
+    function resizeCanvas() {
+        const ratio = Math.max(window.devicePixelRatio || 1, 1);
+        canvas.width = canvas.offsetWidth * ratio;
+        canvas.height = canvas.offsetHeight * ratio;
+        canvas.getContext("2d").scale(ratio, ratio);
+        signaturePad.clear();
+    }
+    window.addEventListener("resize", resizeCanvas);
+    resizeCanvas();
+
+    function getToday() { return new Date().toLocaleDateString('zh-TW').replace(/\//g, '-'); }
+    document.getElementById('hw-title').innerText = `今日功課 (${getToday()})`;
+
+    // --- 功能函式 ---
+    function saveData() {
+        const sId = document.getElementById('student-select').value;
+        if (!sId || signaturePad.isEmpty()) return alert("請選擇學生並完成簽名喔！");
+
+        const data = {
+            id: Date.now(),
+            studentName: students.find(s => s.id == sId).name,
+            comment: document.getElementById('parent-comment').value,
+            signature: signaturePad.toDataURL(),
+            date: getToday(),
+            time: new Date().toLocaleTimeString('zh-TW', {hour12:false})
+        };
+
+        alert("已成功儲存！\n" + data.studentName + " 的家長已完成簽名。");
+        signaturePad.clear();
+        document.getElementById('parent-comment').value = '';
     }
 
-    records.forEach(record => {
-        const card = document.createElement('div');
-        card.className = 'record-card';
-        card.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px dashed #eee; padding-bottom: 8px; margin-bottom: 8px;">
-                <strong>座號 ${record.studentId} - ${record.studentName}</strong>
-                <span style="font-size: 0.8em; color: #888;">${record.time}</span>
-            </div>
-            
-            <div style="margin-bottom: 10px;">
-                <label style="font-size: 0.85em; color: #666;">家長留言：</label>
-                <div style="background: #fdfdfd; padding: 8px; border-radius: 4px; border: 1px solid #f0f0f0;">
-                    ${record.comment ? record.comment : '<span style="color: #ccc;">（無留言）</span>'}
-                </div>
-            </div>
-
-            <div>
-                <label style="font-size: 0.85em; color: #666;">家長簽名圖片：</label>
-                <div style="background: white; border: 1px solid #eee; text-align: center; padding: 5px;">
-                    <img src="${record.signature}" style="max-width: 100%; height: auto; display: block; margin: 0 auto;" alt="家長簽名">
-                </div>
-            </div>
-
-            <button class="delete-btn" onclick="deleteRecord('${record.id}')">刪除此筆簽名紀錄</button>
-        `;
-        listContainer.appendChild(card);
-    });
-}
-
-// 模擬刪除功能
-function deleteRecord(recordId) {
-    if (confirm("確定要刪除這筆家長簽名與留言嗎？此動作無法復原。")) {
-        // 這裡未來會加入 Firebase 的刪除語法：
-        // db.collection('responses').doc(recordId).delete();
-        alert("已成功刪除該筆資料");
-        // 刪除後重新整理清單
-        refreshStats(); 
+    function authAdmin() {
+        if(prompt("請輸入密碼：") === "0904") {
+            document.getElementById('admin-panel').style.display = 'block';
+            showFakeData(); // 這裡先跑模擬資料給您看效果
+        }
     }
-}
+
+    // 模擬老師看到的內容
+    function showFakeData() {
+        const recordsList = document.getElementById('records-list');
+        // 模擬一筆已簽名的資料
+        const fakeData = [{
+            id: "123",
+            studentId: "7",
+            studentName: "林芊惠",
+            time: "19:30:45",
+            comment: "邱老師您好，芊惠今天喉嚨有點痛，麻煩老師多提醒她喝水，謝謝！",
+            signature: canvas.toDataURL() // 抓目前畫布當範例
+        }];
+
+        recordsList.innerHTML = '';
+        fakeData.forEach(r => {
+            recordsList.innerHTML += `
+                <div class="record-card">
+                    <div class="record-header">
+                        <strong>座號 ${r.studentId} ${r.studentName}</strong>
+                        <span>${r.time}</span>
+                    </div>
+                    <div class="comment-display">${r.comment}</div>
+                    <div class="sig-image-box">
+                        <img src="${r.signature}">
+                    </div>
+                    <button class="delete-btn" onclick="this.parentElement.remove()">[ 刪除此筆記錄 ]</button>
+                </div>
+            `;
+        });
+        
+        document.getElementById('stats-area').innerHTML = `<div class="unsigned-box">目前模擬 1 人已簽名，12 人未簽名。</div>`;
+    }
+
+    function publishHomework() {
+        const val = document.getElementById('admin-hw-input').value;
+        if(!val) return alert("請輸入內容");
+        document.getElementById('homework-display').innerText = val;
+        alert("今日功課已更新！");
+    }
+
+    function showHistory() {
+        const d = prompt("請輸入日期 (YYYY-MM-DD)：", getToday());
+        if(d) alert("正在搜尋 " + d + " 的歷史功課...");
+    }
 </script>
+</body>
+</html>
