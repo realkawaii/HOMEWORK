@@ -16,22 +16,18 @@
         .homework-list { background: #fafafa; padding: 20px; border-radius: 4px; border-left: 5px solid var(--muji-accent); min-height: 80px; font-size: 18px; white-space: pre-wrap; line-height: 1.8; }
         .input-group { margin-bottom: 20px; }
         label { display: block; margin-bottom: 8px; font-weight: 500; font-size: 1.1em; }
-        select, textarea, input { width: 100%; padding: 15px; border: 1px solid var(--muji-stone); border-radius: 4px; box-sizing: border-box; font-size: 16px; font-family: inherit; }
+        select, textarea { width: 100%; padding: 15px; border: 1px solid var(--muji-stone); border-radius: 4px; box-sizing: border-box; font-size: 16px; font-family: inherit; }
         
-        /* 老師輸入區域 */
-        #admin-panel { display: none; background: #f9f9f9; padding: 20px; border-radius: 8px; margin-top: 20px; border: 1px dashed var(--muji-accent); }
-        
-        /* 簽名板加大 */
+        #admin-panel { display: none; background: #fdfdfd; padding: 20px; border: 2px solid var(--muji-stone); border-radius: 8px; margin-top: 20px; }
         #signature-pad { border: 1px solid var(--muji-stone); background: #fff; width: 100%; height: 350px; touch-action: none; border-radius: 4px; }
         
         .btn { background-color: var(--muji-charcoal); color: white; border: none; padding: 15px; cursor: pointer; width: 100%; font-size: 18px; border-radius: 4px; margin-top: 10px; }
+        .btn-secondary { background-color: #8c8c8c; margin-top: 20px; }
         .btn-clear { background: none; border: 1px solid var(--muji-stone); color: var(--muji-accent); padding: 8px; margin-top: 10px; width: auto; font-size: 14px; }
-        .btn-admin-toggle { background-color: var(--muji-bg); color: var(--muji-accent); border: 1px solid var(--muji-stone); margin-top: 50px; font-size: 14px; }
         
-        /* 簽名展示區 */
-        .sig-card { border: 1px solid var(--muji-stone); padding: 10px; margin-bottom: 10px; display: flex; flex-direction: column; align-items: center; }
-        .sig-img { max-width: 100%; height: auto; background: white; border: 1px solid #eee; }
-        .unsigned-list { color: #d9534f; font-weight: bold; background: #fff1f0; padding: 10px; border-radius: 4px; }
+        .sig-card { border: 1px solid var(--muji-stone); padding: 15px; margin-bottom: 15px; border-radius: 4px; background: white; }
+        .sig-img { width: 100%; max-width: 400px; height: auto; border: 1px solid #eee; display: block; margin: 10px auto; }
+        .unsigned-box { color: #d9534f; background: #fff1f0; padding: 15px; border-radius: 4px; border: 1px solid #ffa39e; margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -41,54 +37,50 @@
     <h1>電子聯絡簿</h1>
 
     <div class="section">
-        <label>📅 日期：<span id="display-date"></span></label>
+        <label>📅 今日日期：<span id="display-date"></span></label>
         <div id="homework-display" class="homework-list">讀取中...</div>
     </div>
 
     <div id="parent-area" class="section">
         <div class="input-group">
-            <label>座號姓名</label>
+            <label>學生座號姓名</label>
             <select id="student-select"><option value="">請選擇學生</option></select>
         </div>
         <div class="input-group">
-            <label>給邱老師的話</label>
-            <textarea id="parent-comment" rows="2" placeholder="選填，有事請留言"></textarea>
+            <label>想對邱老師說的話</label>
+            <textarea id="parent-comment" rows="2" placeholder="選填"></textarea>
         </div>
         <div class="input-group">
-            <label>家長手寫簽名 (請在下方空白處簽署)</label>
+            <label>家長手寫簽名 (請在下方空白處簽名)</label>
             <canvas id="signature-pad"></canvas>
-            <button class="btn-clear" onclick="signaturePad.clear()">清除簽名並重簽</button>
+            <button class="btn-clear" onclick="signaturePad.clear()">清除重簽</button>
         </div>
-        <button class="btn" onclick="saveSignature()">確認儲存並送出</button>
+        <button class="btn" onclick="saveSignature()">儲存並送出</button>
     </div>
 
-    <button class="btn btn-admin-toggle" id="admin-entry-btn" onclick="adminAuth()">老師管理入口</button>
+    <button class="btn" style="background:none; color:var(--muji-accent); font-size:14px; border:1px solid var(--muji-stone); margin-top:50px;" onclick="adminAuth()">老師管理入口</button>
 
     <div id="admin-panel">
-        <h2 style="margin-top:0">邱老師管理台</h2>
+        <h2 style="border-bottom:2px solid var(--muji-stone); padding-bottom:10px;">邱老師管理台</h2>
         
         <div class="input-group">
-            <label>編輯今日功課 (輸入後請按儲存)</label>
-            <textarea id="hw-input" rows="8" placeholder="輸入功課，Enter可換行"></textarea>
-            <button class="btn" style="background:#5a5a5a" onclick="saveHomework()">儲存今日功課</button>
+            <label>1. 編輯今日功課 (輸入後按儲存)</label>
+            <textarea id="hw-input" rows="8"></textarea>
+            <button class="btn" onclick="saveHomework()">儲存今日功課</button>
         </div>
 
         <div class="section">
-            <label>簽名與統計檢視</label>
-            <button class="btn" style="background:#8c8c8c" onclick="loadStats()">1. 重新整理統計與名單</button>
-            <div id="stats-output" style="margin-top:15px"></div>
-            
-            <div id="sig-viewer" style="margin-top:20px; display:none;">
-                <label>2. 家長簽名圖檔檢視</label>
-                <div id="sig-list"></div>
-            </div>
+            <label>2. 簽名統計與回覆檢視</label>
+            <button class="btn btn-secondary" onclick="loadStats()">載入今日簽名名單</button>
+            <div id="stats-output" style="margin-top:20px;"></div>
+            <div id="sig-list" style="margin-top:20px;"></div>
         </div>
     </div>
 </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, doc, setDoc, onSnapshot, collection, addDoc, query, where, getDocs, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, doc, setDoc, onSnapshot, collection, addDoc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyDDLO02aKJgvUa6Jk2GGslcWBhOtPHS4hE",
@@ -106,7 +98,6 @@
 
     const students = ["何睿信","陳柏翰","黃明璿","黃則善","黃暐翰","劉栢睿","林芊惠","段孟涵","洪煜晴","張育慈","許令霏","廖以晨","劉晏妤"];
 
-    // 初始化下拉選單
     const select = document.getElementById('student-select');
     students.forEach((name, i) => {
         let opt = document.createElement('option');
@@ -115,23 +106,18 @@
         select.appendChild(opt);
     });
 
-    // 簽名板初始化
     const canvas = document.getElementById('signature-pad');
     window.signaturePad = new SignaturePad(canvas);
 
-    // 即時同步今日功課
-    onSnapshot(doc(db, "homework", today), (snapshot) => {
-        const data = snapshot.exists() ? snapshot.data().content : "今日尚無功課。";
-        document.getElementById('homework-display').innerText = data;
-        document.getElementById('hw-input').value = snapshot.exists() ? data : "";
+    onSnapshot(doc(db, "homework", today), (snap) => {
+        const content = snap.exists() ? snap.data().content : "邱老師尚未輸入今日功課。";
+        document.getElementById('homework-display').innerText = content;
+        document.getElementById('hw-input').value = snap.exists() ? content : "";
     });
 
-    // 家長送出
     window.saveSignature = async () => {
         const sid = select.value;
-        if (!sid || signaturePad.isEmpty()) return alert("請選擇座號並簽名！");
-        if (!confirm(`確認提交 ${students[sid-1]} 的簽名嗎？`)) return;
-
+        if (!sid || signaturePad.isEmpty()) return alert("請完整填寫座號與簽名");
         try {
             await addDoc(collection(db, "responses"), {
                 date: today,
@@ -141,61 +127,67 @@
                 signature: signaturePad.toDataURL(),
                 timestamp: new Date()
             });
-            alert("儲存成功！");
+            alert("簽名成功！");
             location.reload();
-        } catch (e) { alert("連線錯誤"); }
+        } catch (e) { alert("儲存失敗"); }
     };
 
-    // 老師登入
     window.adminAuth = () => {
-        const pw = prompt("管理密碼：");
-        if (pw === "0904") {
+        if (prompt("管理密碼：") === "0904") {
             document.getElementById('admin-panel').style.display = 'block';
-            document.getElementById('admin-entry-btn').style.display = 'none';
             window.scrollTo(0, document.body.scrollHeight);
         } else { alert("密碼錯誤"); }
     };
 
-    // 儲存功課功能 (修正用)
     window.saveHomework = async () => {
         const content = document.getElementById('hw-input').value;
-        if (!content) return alert("內容不可為空");
-        await setDoc(doc(db, "homework", today), { content, updatedAt: new Date() });
-        alert("功課已儲存並發布！");
+        await setDoc(doc(db, "homework", today), { content });
+        alert("功課已儲存！");
     };
 
-    // 載入統計與簽名圖檔
     window.loadStats = async () => {
-        const q = query(collection(db, "responses"), where("date", "==", today), orderBy("studentId", "asc"));
-        const snap = await getDocs(q);
-        let signedIds = [];
-        let sigHtml = "";
+        const statsOut = document.getElementById('stats-output');
+        const sigList = document.getElementById('sig-list');
+        statsOut.innerHTML = "讀取中...";
+        sigList.innerHTML = "";
 
-        snap.forEach(d => {
-            const r = d.data();
-            signedIds.push(r.studentId);
-            sigHtml += `
-                <div class="sig-card">
-                    <div style="width:100%; border-bottom:1px solid #eee; padding-bottom:5px; margin-bottom:5px;">
-                        <b>座號 ${r.studentId} (${r.studentName})</b><br>
-                        <small>留言：${r.comment || '無'}</small>
-                    </div>
-                    <img src="${r.signature}" class="sig-img">
-                </div>`;
-        });
+        try {
+            // 只依日期查詢，不加 orderBy 以避免 Index 錯誤
+            const q = query(collection(db, "responses"), where("date", "==", today));
+            const snap = await getDocs(q);
+            
+            let resData = [];
+            snap.forEach(d => resData.push(d.data()));
 
-        const unsigned = students.map((_, i) => i + 1).filter(id => !signedIds.includes(id));
-        
-        document.getElementById('stats-output').innerHTML = `
-            <div>已簽名人數：${signedIds.length} / 13</div>
-            <div class="unsigned-list">未簽名：${unsigned.length === 0 ? '全數完成' : unsigned.join(', ')}</div>
-        `;
+            // 在前端對結果進行排序
+            resData.sort((a, b) => a.studentId - b.studentId);
 
-        document.getElementById('sig-viewer').style.display = 'block';
-        document.getElementById('sig-list').innerHTML = sigHtml;
+            let signedIds = [];
+            let html = "";
+
+            resData.forEach(r => {
+                signedIds.push(r.studentId);
+                html += `
+                    <div class="sig-card">
+                        <b>座號 ${r.studentId} - ${r.studentName}</b><br>
+                        <small>留言：${r.comment || '無'}</small><br>
+                        <img src="${r.signature}" class="sig-img">
+                    </div>`;
+            });
+
+            const unsigned = students.map((_, i) => i + 1).filter(id => !signedIds.includes(id));
+            
+            statsOut.innerHTML = `
+                <div style="font-size:1.2em;">已簽名：<b>${signedIds.length}</b> / 13</div>
+                <div class="unsigned-box">尚未簽名：${unsigned.length === 0 ? '全數完成' : unsigned.join(', ')}</div>
+            `;
+            sigList.innerHTML = html;
+
+        } catch (e) {
+            statsOut.innerHTML = "讀取失敗，錯誤訊息：" + e.message;
+        }
     };
 
-    // 修正行動端 Canvas 寬度
     function resizeCanvas() {
         const ratio = Math.max(window.devicePixelRatio || 1, 1);
         canvas.width = canvas.offsetWidth * ratio;
