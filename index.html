@@ -2,221 +2,266 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>大吉國中 204 電子聯絡簿</title>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@500;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
-    
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, doc, setDoc, getDoc, collection, addDoc, onSnapshot, query, orderBy, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyDDLO02aKJgvUa6Jk2GGslcWBhOtPHS4hE",
-            authDomain: "homework-5072f.firebaseapp.com",
-            projectId: "homework-5072f",
-            storageBucket: "homework-5072f.firebasestorage.app",
-            messagingSenderId: "927888465824",
-            appId: "1:927888465824:web:7c6abc1c2212325900cec5",
-            measurementId: "G-N9G0HZM1NT"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-
-        const students = [{id:1, name:"何睿信"}, {id:2, name:"陳柏翰"}, {id:3, name:"黃明璿"}, {id:4, name:"黃則善"}, {id:5, name:"黃暐翰"}, {id:6, name:"劉栢睿"}, {id:7, name:"林芊惠"}, {id:8, name:"段孟涵"}, {id:9, name:"洪煜晴"}, {id:10, name:"張育慈"}, {id:11, name:"許令霏"}, {id:12, name:"廖以晨"}, {id:13, name:"劉晏妤"}];
-        
-        const sel = document.getElementById('student-sel');
-        students.forEach(s => {
-            const opt = document.createElement('option');
-            opt.value = s.id;
-            opt.textContent = `${s.id}. ${s.name}`;
-            sel.appendChild(opt);
-        });
-
-        const canvas = document.getElementById('canvas');
-        const pad = new SignaturePad(canvas);
-
-        function getFormattedDate() {
-            const now = new Date();
-            const days = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
-            return `${now.toLocaleDateString('zh-TW')} ${days[now.getDay()]}`;
-        }
-
-        // 監聽今日功課
-        onSnapshot(doc(db, "configs", "today_homework"), (docSnap) => {
-            if (docSnap.exists()) {
-                document.getElementById('hw-content').innerText = docSnap.data().content;
-                document.getElementById('hw-date').innerText = docSnap.data().date || getFormattedDate();
-            }
-        });
-
-        // 老師更新功課
-        window.updateHW = async () => {
-            const val = document.getElementById('hw-input').value;
-            if(!val) return alert("請輸入內容");
-            const oldContent = document.getElementById('hw-content').innerText;
-            const oldDate = document.getElementById('hw-date').innerText;
-
-            try {
-                await addDoc(collection(db, "history_homework"), {
-                    date: oldDate,
-                    content: oldContent,
-                    timestamp: Date.now()
-                });
-                await setDoc(doc(db, "configs", "today_homework"), {
-                    content: val,
-                    date: getFormattedDate()
-                });
-                document.getElementById('hw-input').value = '';
-                alert("更新成功！");
-            } catch(e) { alert("錯誤：" + e); }
-        };
-
-        // 家長簽名儲存
-        window.saveData = async () => {
-            const sid = sel.value;
-            if(!sid || pad.isEmpty()) return alert("請選擇學生並簽名");
-            try {
-                await addDoc(collection(db, "signatures"), {
-                    sid: sid,
-                    name: students.find(s => s.id == sid).name,
-                    comment: document.getElementById('comment').value,
-                    sig: pad.toDataURL(),
-                    time: new Date().toLocaleTimeString(),
-                    timestamp: Date.now()
-                });
-                alert("簽名成功！");
-                pad.clear();
-            } catch(e) { alert("儲 nom 失敗"); }
-        };
-
-        // 之前功課展開收合
-        let isHistoryShow = false;
-        window.toggleHistory = () => {
-            const box = document.getElementById('history-box');
-            isHistoryShow = !isHistoryShow;
-            if (isHistoryShow) {
-                const q = query(collection(db, "history_homework"), orderBy("timestamp", "desc"));
-                onSnapshot(q, (snapshot) => {
-                    box.innerHTML = snapshot.docs.map(d => `<div class="hist-item"><b>${d.data().date}</b><br>${d.data().content}</div>`).join('');
-                });
-                box.style.display = 'block';
-            } else {
-                box.style.display = 'none';
-            }
-        };
-
-        // 老師管理登入
-        window.loginAdmin = () => {
-            if(prompt("請輸入密碼：") === "0904") {
-                document.getElementById('admin-panel').style.display = 'block';
-                // 監聽歷史功課管理
-                onSnapshot(query(collection(db, "history_homework"), orderBy("timestamp", "desc")), (snap) => {
-                    const hList = document.getElementById('admin-history-manage');
-                    hList.innerHTML = snap.docs.map(d => `
-                        <div class="edit-card">
-                            <small>${d.data().date}</small>
-                            <textarea id="edit-${d.id}" style="font-size:14px; margin:5px 0;">${d.data().content}</textarea>
-                            <button onclick="window.saveEditHW('${d.id}')">儲存修改</button>
-                            <button onclick="window.deleteHW('${d.id}')" style="color:red;">刪除</button>
-                        </div>
-                    `).join('');
-                });
-                // 監聽簽名
-                onSnapshot(query(collection(db, "signatures"), orderBy("timestamp", "desc")), (snap) => {
-                    renderStats(snap.docs.map(d => d.data()));
-                    document.getElementById('records-list').innerHTML = snap.docs.map(d => `
-                        <div class="record-card">
-                            <b>${d.data().sid}. ${d.data().name} (${d.data().time})</b><br>
-                            留言：${d.data().comment || '無'}<br>
-                            <img src="${d.data().sig}" style="width:100%; border:1px solid #eee;">
-                            <button onclick="window.deleteSig('${d.id}')" style="color:red; background:none; border:none; cursor:pointer;">[刪除紀錄]</button>
-                        </div>
-                    `).join('');
-                });
-            }
-        };
-
-        function renderStats(records) {
-            const signedIds = records.map(r => parseInt(r.sid));
-            const unsigned = students.filter(s => !signedIds.includes(s.id));
-            document.getElementById('stats-area').innerHTML = `<div style="background:#fff1f1; padding:10px; border-radius:4px;">未簽名：${unsigned.length > 0 ? unsigned.map(s => s.name).join('、') : '全班已簽名'}</div>`;
-        }
-
-        // 老師管理動作
-        window.saveEditHW = async (id) => {
-            const newContent = document.getElementById(`edit-${id}`).value;
-            await updateDoc(doc(db, "history_homework", id), { content: newContent });
-            alert("歷史內容已修正");
-        };
-        window.deleteHW = async (id) => {
-            if(confirm("確定刪除這筆歷史功課？")) await deleteDoc(doc(db, "history_homework", id));
-        };
-        window.deleteSig = async (id) => {
-            if(confirm("確定刪除簽名？")) await deleteDoc(doc(db, "signatures", id));
-        };
-
-        function resizeCanvas() {
-            const ratio = Math.max(window.devicePixelRatio || 1, 1);
-            canvas.width = canvas.offsetWidth * ratio;
-            canvas.height = canvas.offsetHeight * ratio;
-            canvas.getContext("2d").scale(ratio, ratio);
-            pad.clear();
-        }
-        window.onresize = resizeCanvas;
-        resizeCanvas();
-    </script>
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>邱老師雲端隨手記 - 權限管理版</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500&display=swap" rel="stylesheet">
     <style>
-        :root { --muji-bg: #f2f0eb; --blackboard-green: #2c4c3e; --chalk-white: #fdfdfd; --muji-charcoal: #333333; }
+        :root { --muji-beige: #f5f3f0; --muji-charcoal: #333333; --muji-stone: #e0dbd5; --muji-white: #ffffff; }
         * { box-sizing: border-box; }
-        body { font-family: 'Noto Sans TC', sans-serif; background-color: var(--muji-bg); color: var(--muji-charcoal); margin: 0; padding: 15px; }
-        .container { max-width: 600px; margin: 0 auto; background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        .header-section { text-align: center; margin-bottom: 25px; }
-        .school-info, .main-title { font-size: 2em; font-weight: 700; display: block; line-height: 1.4; }
-        .blackboard { background-color: var(--blackboard-green); border: 12px solid #5d4037; border-radius: 4px; padding: 20px; text-align: center; }
-        .bb-title { color: #ffd54f; font-size: 1.8em; font-weight: 700; margin-bottom: 5px; }
-        .bb-date { color: rgba(255,255,255,0.8); font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px dashed rgba(255,255,255,0.3); padding-bottom: 10px; }
-        .homework-content { color: var(--chalk-white); font-size: 1.4em; line-height: 1.8; white-space: pre-wrap; min-height: 100px; text-align: left; }
-        .btn { background-color: var(--muji-charcoal); color: white; border: none; padding: 18px; cursor: pointer; width: 100%; font-size: 20px; border-radius: 6px; font-weight: 700; }
-        .btn-history { background: none; border: 2px solid #888; color: #888; font-size: 16px; margin-top: 5px; height: 50px; }
-        #history-box { display: none; padding: 15px; background: #f0f0f0; margin-top: 10px; border-radius: 4px; border: 1px solid #ddd; }
-        .hist-item { border-bottom: 1px solid #ccc; padding: 10px 0; }
-        .admin-area { display: none; margin-top: 40px; padding: 20px; background: #eef2f3; border-radius: 8px; border: 2px solid #ccc; }
-        .record-card, .edit-card { background: white; border: 1px solid #bbb; padding: 15px; margin-bottom: 10px; border-radius: 4px; }
-        .sig-wrapper { border: 2px solid var(--muji-charcoal); background: #fff; border-radius: 6px; }
-        canvas { width: 100%; height: 350px; touch-action: none; display: block; }
+        body { margin: 0; font-family: 'Noto Sans TC', sans-serif; background: var(--muji-beige); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        
+        /* 頂部列 */
+        .header { padding: 10px 15px; background: var(--muji-white); border-bottom: 1px solid var(--muji-stone); display: flex; justify-content: space-between; align-items: center; }
+        .user-status { font-size: 12px; color: #666; background: #eee; padding: 2px 8px; border-radius: 10px; }
+        
+        /* 工具列 */
+        .toolbar { padding: 8px 15px; display: flex; gap: 8px; background: var(--muji-white); border-bottom: 1px solid var(--muji-stone); overflow-x: auto; }
+        
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        @media (min-width: 900px) { .main-content { flex-direction: row; } }
+
+        #canvas-container { flex: 2; padding: 10px; display: flex; justify-content: center; align-items: center; background: #ddd; }
+        #canvas-wrap { width: 100%; height: 100%; max-width: 800px; background: white; position: relative; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        canvas { display: block; touch-action: none; width: 100%; height: 100%; }
+
+        #history { flex: 1; background: var(--muji-beige); padding: 15px; overflow-y: auto; border-left: 1px solid var(--muji-stone); }
+        
+        .btn { border: 1px solid var(--muji-stone); background: white; padding: 6px 12px; border-radius: 2px; cursor: pointer; font-size: 13px; }
+        .btn.active { background: var(--muji-charcoal); color: white; }
+        .btn-primary { background: var(--muji-charcoal); color: white; border: none; }
+
+        /* 打字與登入視窗 */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
+        .modal-content { background: white; padding: 20px; border-radius: 8px; width: 90%; max-width: 400px; }
+        textarea { width: 100%; height: 120px; font-size: 18px; padding: 10px; margin-bottom: 10px; }
+        input[type="password"] { width: 100%; padding: 10px; margin-bottom: 10px; font-size: 16px; border: 1px solid #ccc; }
+        
+        .record-card { background: white; padding: 10px; border-radius: 4px; margin-bottom: 10px; border: 1px solid var(--muji-stone); }
+        .record-card img { width: 100%; border-bottom: 1px solid #eee; margin-bottom: 5px; }
+
+        /* 隱藏特定功能的樣式 */
+        .admin-only { display: none; } /* 預設隱藏，老師登入才顯示 */
     </style>
 </head>
 <body>
-<div class="container">
-    <div class="header-section">
-        <span class="school-info">大吉國中 二年四班</span>
-        <span class="main-title">電子聯絡簿</span>
+
+    <div id="login-modal" class="modal">
+        <div class="modal-content">
+            <h3>管理帳號登入</h3>
+            <input type="password" id="login-pwd" placeholder="請輸入密碼">
+            <div style="display:flex; gap:10px; justify-content: flex-end;">
+                <button class="btn" onclick="closeModal('login-modal')">取消</button>
+                <button class="btn btn-primary" onclick="handleLogin()">登入</button>
+            </div>
+        </div>
     </div>
-    <div class="blackboard">
-        <div class="bb-title">今日功課</div>
-        <div class="bb-date" id="hw-date">載入中...</div>
-        <div id="hw-content" class="homework-content">載入中...</div>
+
+    <div id="text-modal" class="modal">
+        <div class="modal-content">
+            <h3>輸入內容</h3>
+            <textarea id="modal-textarea"></textarea>
+            <div style="display:flex; gap:10px; justify-content: flex-end;">
+                <button class="btn" onclick="closeModal('text-modal')">取消</button>
+                <button class="btn btn-primary" onclick="confirmText()">確定</button>
+            </div>
+        </div>
     </div>
-    <button class="btn btn-history" onclick="toggleHistory()">📂 查看之前功課 (展開/收起)</button>
-    <div id="history-box"></div>
-    <div style="font-size: 1.3em; font-weight: 700; border-left: 6px solid #333; padding-left: 12px; margin: 25px 0 15px 0;">家長簽名</div>
-    <div style="margin-bottom:20px;"><label style="font-weight:700;">1. 選擇學生</label><select id="student-sel" style="width:100%; padding:14px; font-size:18px;"><option value="">請點擊選擇座號姓名</option></select></div>
-    <div style="margin-bottom:20px;"><label style="font-weight:700;">2. 想對老師說的話</label><textarea id="comment" rows="2" style="width:100%; padding:14px; font-size:18px;"></textarea></div>
-    <div style="margin-bottom:20px;"><label style="font-weight:700;">3. 家長簽名</label><div class="sig-wrapper"><canvas id="canvas"></canvas></div><button onclick="pad.clear()" style="width:100%; padding:10px; background:none; border:none; text-decoration:underline; color:#666; cursor:pointer;">清除重簽</button></div>
-    <button class="btn" onclick="saveData()">確認儲存並送出</button>
-    <button onclick="loginAdmin()" style="margin-top:100px; opacity:0.1; background:none; border:none; width:100%;">管理</button>
-    <div id="admin-panel" class="admin-area">
-        <h3>管理後台</h3>
-        <div style="margin-bottom:20px;"><label>發布新功課</label><textarea id="hw-input" rows="3" style="width:100%; padding:10px;"></textarea><button class="btn" style="background:#444;" onclick="updateHW()">發布並封存舊功課</button></div>
-        <h4>管理歷史功課</h4>
-        <div id="admin-history-manage"></div>
-        <h4>今日簽名統計</h4>
-        <div id="stats-area"></div>
-        <div id="records-list"></div>
+
+    <div class="header">
+        <div style="display:flex; align-items:center; gap:10px;">
+            <h2 style="margin:0; font-size: 18px;">大吉國中功課登錄</h2>
+            <span id="role-tag" class="user-status">訪客模式</span>
+        </div>
+        <div>
+            <button class="btn" onclick="openModal('login-modal')">管理帳號</button>
+            <button class="btn btn-primary" onclick="saveToCloud()" id="saveBtn">儲存同步</button>
+        </div>
     </div>
-</div>
+
+    <div class="toolbar">
+        <button class="btn active" id="penBtn" onclick="setTool('pen')">筆</button>
+        <button class="btn" id="textBtn" onclick="setTool('text')">打字</button>
+        <button class="btn" id="eraserBtn" onclick="setTool('eraser')">橡皮擦</button>
+        <button class="btn color-btn active" id="color-#333" onclick="setColor('#333')">黑</button>
+        <button class="btn color-btn" id="color-#a52a2a" onclick="setColor('#a52a2a')">紅</button>
+        <button class="btn" onclick="resetCanvas()" style="margin-left:auto;">清空</button>
+    </div>
+
+    <div class="main-content">
+        <div id="canvas-container">
+            <div id="canvas-wrap"><canvas id="mainCanvas"></canvas></div>
+        </div>
+        <div id="history">
+            <b style="color:#888; font-size:12px;">歷史紀錄</b>
+            <div id="recordList" style="margin-top:10px;"></div>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyDtTj8uoMK5l-XPDecE4Yyl_3IFCJB1SdQ",
+            authDomain: "singer-9d813.firebaseapp.com",
+            projectId: "singer-9d813",
+            storageBucket: "singer-9d813.appspot.com",
+            messagingSenderId: "550661805021",
+            appId: "1:550661805021:web:1f61bc3bada3e07dcd5c34"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        const canvas = document.getElementById('mainCanvas');
+        const ctx = canvas.getContext('2d');
+        const wrap = document.getElementById('canvas-wrap');
+        let drawing = false, currentTool = 'pen', currentColor = '#333', editDocId = null, lastTouchPos = null;
+        let userRole = 'guest'; // guest, student, teacher
+
+        function initCanvas() {
+            canvas.width = wrap.offsetWidth; canvas.height = wrap.offsetHeight;
+            ctx.fillStyle = 'white'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.lineCap = 'round'; ctx.lineWidth = 3;
+        }
+        window.onload = initCanvas;
+        window.onresize = initCanvas;
+
+        // --- 登入邏輯 ---
+        window.handleLogin = () => {
+            const pwd = document.getElementById('login-pwd').value;
+            const roleTag = document.getElementById('role-tag');
+            
+            if (pwd === "0214") {
+                userRole = 'student';
+                roleTag.innerText = "學生權限：僅限登錄功課";
+                roleTag.style.background = "#d1ecf1";
+                alert("學生模式登入成功！");
+            } else if (pwd === "老師密碼") { // 您可以自訂一組老師密碼
+                userRole = 'teacher';
+                roleTag.innerText = "管理員：邱老師";
+                roleTag.style.background = "#f8d7da";
+                alert("老師模式登入成功！");
+            } else {
+                alert("密碼錯誤！");
+            }
+            document.getElementById('login-pwd').value = "";
+            closeModal('login-modal');
+            renderHistory(); // 重新整理列表以套用權限
+        };
+
+        // --- 畫布邏輯 (略，同前版本) ---
+        function getPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            const cx = e.touches ? e.touches[0].clientX : e.clientX;
+            const cy = e.touches ? e.touches[0].clientY : e.clientY;
+            return { x: (cx - rect.left) * (canvas.width / rect.width), y: (cy - rect.top) * (canvas.height / rect.height) };
+        }
+        canvas.addEventListener('mousedown', (e) => { 
+            const p = getPos(e); 
+            if(currentTool === 'text'){ lastTouchPos=p; openModal('text-modal'); } 
+            else { drawing=true; ctx.beginPath(); ctx.moveTo(p.x, p.y); }
+        });
+        canvas.addEventListener('mousemove', (e) => { 
+            if(!drawing || currentTool === 'text') return; 
+            const p = getPos(e); 
+            ctx.strokeStyle = (currentTool === 'eraser') ? 'white' : currentColor;
+            ctx.lineWidth = (currentTool === 'eraser') ? 30 : 3;
+            ctx.lineTo(p.x, p.y); ctx.stroke();
+        });
+        window.addEventListener('mouseup', () => drawing = false);
+        canvas.addEventListener('touchstart', (e) => {
+            const p = getPos(e);
+            if(currentTool === 'text'){ lastTouchPos=p; openModal('text-modal'); }
+            else { drawing=true; ctx.beginPath(); ctx.moveTo(p.x, p.y); }
+            e.preventDefault();
+        }, {passive: false});
+        canvas.addEventListener('touchmove', (e) => {
+            if(!drawing || currentTool === 'text') return;
+            const p = getPos(e);
+            ctx.strokeStyle = (currentTool === 'eraser') ? 'white' : currentColor;
+            ctx.lineTo(p.x, p.y); ctx.stroke();
+            e.preventDefault();
+        }, {passive: false});
+        window.addEventListener('touchend', () => drawing = false);
+
+        window.setTool = (t) => {
+            currentTool = t;
+            document.querySelectorAll('.toolbar .btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(t + 'Btn').classList.add('active');
+        };
+        window.setColor = (c) => {
+            currentColor = c;
+            document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('color-' + c).classList.add('active');
+            if(currentTool === 'eraser') setTool('pen');
+        };
+        window.openModal = (id) => { document.getElementById(id).style.display = 'flex'; };
+        window.closeModal = (id) => { document.getElementById(id).style.display = 'none'; };
+        
+        window.confirmText = () => {
+            const txt = document.getElementById('modal-textarea').value;
+            if(txt && lastTouchPos) {
+                ctx.fillStyle = currentColor; ctx.font = "20px 'Noto Sans TC'";
+                const lines = txt.split('\n');
+                lines.forEach((l, i) => ctx.fillText(l, lastTouchPos.x, lastTouchPos.y + (i*25)));
+            }
+            document.getElementById('modal-textarea').value = "";
+            closeModal('text-modal');
+        };
+
+        window.resetCanvas = () => { ctx.fillStyle = 'white'; ctx.fillRect(0, 0, canvas.width, canvas.height); editDocId = null; };
+
+        window.saveToCloud = async () => {
+            if(userRole === 'guest') { alert("請先登入帳號再儲存！"); return; }
+            const btn = document.getElementById('saveBtn');
+            btn.innerText = "儲存中...";
+            const dataURL = canvas.toDataURL("image/png");
+            try {
+                if (editDocId && userRole === 'teacher') {
+                    await db.collection("handwriting_notes").doc(editDocId).update({ data: dataURL, time: new Date().toLocaleString() });
+                } else {
+                    await db.collection("handwriting_notes").add({ data: dataURL, time: new Date().toLocaleString(), createdAt: Date.now(), user: userRole });
+                }
+                resetCanvas();
+            } catch (e) { alert("儲存失敗"); }
+            btn.innerText = "儲存同步";
+        };
+
+        // --- 歷史紀錄渲染 (含權限控制) ---
+        function renderHistory() {
+            db.collection("handwriting_notes").orderBy("createdAt", "desc").limit(10).onSnapshot((snapshot) => {
+                const list = document.getElementById('recordList');
+                list.innerHTML = '';
+                snapshot.forEach((doc) => {
+                    const item = doc.data();
+                    const div = document.createElement('div');
+                    div.className = 'record-card';
+                    
+                    // 點擊編輯功能：僅限老師
+                    div.onclick = () => {
+                        if (userRole === 'teacher') {
+                            const img = new Image();
+                            img.onload = () => {
+                                ctx.fillStyle = 'white'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+                                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                                editDocId = doc.id;
+                            };
+                            img.src = item.data;
+                        } else {
+                            alert("學生權限無法編輯舊紀錄。");
+                        }
+                    };
+
+                    // 刪除按鈕：僅限老師
+                    let delHtml = (userRole === 'teacher') ? 
+                        `<span style="color:red;float:right;cursor:pointer;" onclick="event.stopPropagation(); if(confirm('刪除？')) db.collection('handwriting_notes').doc('${doc.id}').delete();">刪除</span>` : '';
+
+                    div.innerHTML = `<img src="${item.data}"><div style="font-size:11px;">${item.time} ${delHtml}</div>`;
+                    list.appendChild(div);
+                });
+            });
+        }
+        renderHistory();
+    </script>
 </body>
 </html>
