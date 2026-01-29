@@ -4,16 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>大吉國中 204 電子聯絡簿</title>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
     <style>
         :root { --muji-bg: #f2f0eb; --muji-stone: #e0dbd1; --muji-charcoal: #333333; --muji-accent: #8c8c8c; }
         body { font-family: 'Noto Sans TC', sans-serif; background-color: var(--muji-bg); color: var(--muji-charcoal); margin: 0; padding: 15px; }
-        .container { max-width: 800px; margin: 0 auto; background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 15px rgba(0,0,0,0.05); }
-        .school-info { font-size: 0.9em; color: var(--muji-accent); text-align: center; margin-bottom: 5px; }
-        h1 { text-align: center; font-weight: 500; margin-bottom: 25px; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 15px rgba(0,0,0,0.05); }
+        
+        /* 標題放大區 */
+        .header-area { text-align: center; margin-bottom: 40px; border-bottom: 2px solid var(--muji-charcoal); padding-bottom: 20px; }
+        .school-info { font-size: 1.5em; color: var(--muji-accent); font-weight: 400; letter-spacing: 2px; margin-bottom: 10px; }
+        .main-title { font-size: 3em; font-weight: 700; color: var(--muji-charcoal); margin: 0; letter-spacing: 5px; }
+        
         .section { border-bottom: 1px solid var(--muji-stone); padding: 25px 0; }
-        .homework-list { background: #fafafa; padding: 20px; border-radius: 4px; border-left: 5px solid var(--muji-accent); min-height: 80px; font-size: 18px; white-space: pre-wrap; line-height: 1.8; }
+        .homework-list { background: #fafafa; padding: 20px; border-radius: 4px; border-left: 5px solid var(--muji-accent); min-height: 80px; font-size: 1.2em; white-space: pre-wrap; line-height: 1.8; }
         .input-group { margin-bottom: 20px; }
         label { display: block; margin-bottom: 8px; font-weight: 500; font-size: 1.1em; }
         select, textarea { width: 100%; padding: 15px; border: 1px solid var(--muji-stone); border-radius: 4px; box-sizing: border-box; font-size: 16px; font-family: inherit; }
@@ -28,13 +32,21 @@
         .sig-card { border: 1px solid var(--muji-stone); padding: 15px; margin-bottom: 15px; border-radius: 4px; background: white; }
         .sig-img { width: 100%; max-width: 400px; height: auto; border: 1px solid #eee; display: block; margin: 10px auto; }
         .unsigned-box { color: #d9534f; background: #fff1f0; padding: 15px; border-radius: 4px; border: 1px solid #ffa39e; margin-top: 10px; }
+
+        /* 手機版標題縮放調整 */
+        @media (max-width: 600px) {
+            .school-info { font-size: 1.2em; }
+            .main-title { font-size: 2.2em; }
+        }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div class="school-info">大吉國中 二年四班</div>
-    <h1>電子聯絡簿</h1>
+    <div class="header-area">
+        <div class="school-info">大吉國中 二年四班</div>
+        <h1 class="main-title">電子聯絡簿</h1>
+    </div>
 
     <div class="section">
         <label>📅 今日日期：<span id="display-date"></span></label>
@@ -152,19 +164,14 @@
         sigList.innerHTML = "";
 
         try {
-            // 只依日期查詢，不加 orderBy 以避免 Index 錯誤
             const q = query(collection(db, "responses"), where("date", "==", today));
             const snap = await getDocs(q);
-            
             let resData = [];
             snap.forEach(d => resData.push(d.data()));
-
-            // 在前端對結果進行排序
             resData.sort((a, b) => a.studentId - b.studentId);
 
             let signedIds = [];
             let html = "";
-
             resData.forEach(r => {
                 signedIds.push(r.studentId);
                 html += `
@@ -176,16 +183,12 @@
             });
 
             const unsigned = students.map((_, i) => i + 1).filter(id => !signedIds.includes(id));
-            
             statsOut.innerHTML = `
                 <div style="font-size:1.2em;">已簽名：<b>${signedIds.length}</b> / 13</div>
                 <div class="unsigned-box">尚未簽名：${unsigned.length === 0 ? '全數完成' : unsigned.join(', ')}</div>
             `;
             sigList.innerHTML = html;
-
-        } catch (e) {
-            statsOut.innerHTML = "讀取失敗，錯誤訊息：" + e.message;
-        }
+        } catch (e) { statsOut.innerHTML = "讀取失敗"; }
     };
 
     function resizeCanvas() {
