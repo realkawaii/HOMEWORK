@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大吉國中 204 電子聯絡簿</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
+    <style>
+        :root { --muji-bg: #f2f0eb; --muji-stone: #e0dbd1; --muji-charcoal: #333333; --muji-accent: #8c8c8c; }
+        body { font-family: 'Noto Sans TC', sans-serif; background-color: var(--muji-bg); color: var(--muji-charcoal); margin: 0; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 25px; border-radius: 4px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .school-info { font-size: 0.9em; color: var(--muji-accent); text-align: center; margin-bottom: 5px; }
+        h1 { text-align: center; font-weight: 500; margin-top: 0; }
+        .section { border-bottom: 1px solid var(--muji-stone); padding: 20px 0; }
+        .homework-list { background: #fafafa; padding: 15px; border-radius: 4px; border-left: 4px solid var(--muji-accent); min-height: 50px; white-space: pre-wrap; }
+        .input-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: 500; }
+        input, select, textarea { width: 100%; padding: 12px; border: 1px solid var(--muji-stone); border-radius: 4px; box-sizing: border-box; font-size: 16px; }
+        #signature-pad { border: 1px solid var(--muji-stone); background: #fff; width: 100%; height: 200px; touch-action: none; border-radius: 4px; }
+        .btn { background-color: var(--muji-charcoal); color: white; border: none; padding: 12px; cursor: pointer; width: 100%; font-size: 16px; border-radius: 4px; margin-top: 10px; }
+        .btn-admin { background-color: var(--muji-bg); color: var(--muji-accent); border: 1px solid var(--muji-stone); margin-top: 40px; }
+        .status-tag { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.8em; background: #eee; margin-left: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="school-info">大吉國中 二年四班</div>
+    <h1>電子聯絡簿</h1>
+
+    <div class="section">
+        <label>📅 今日日期：<span id="display-date"></span></label>
+        <div id="homework-display" class="homework-list">讀取今日功課中...</div>
+    </div>
+
+    <div id="parent-area" class="section">
+        <div class="input-group">
+            <label>1. 選擇學生座號姓名</label>
+            <select id="student-select">
+                <option value="">請選擇...</option>
+            </select>
+        </div>
+        <div class="input-group">
+            <label>2. 想跟邱老師說的話 (選填)</label>
+            <textarea id="parent-comment" rows="2"></textarea>
+        </div>
+        <div class="input-group">
+            <label>3. 家長手寫簽名</label>
+            <canvas id="signature-pad"></canvas>
+            <button onclick="signaturePad.clear()" style="background:none; border:none; color:var(--muji-accent); cursor:pointer; font-size:12px; padding:5px;">清除重簽</button>
+        </div>
+        <button class="btn" onclick="saveSignature()">儲存並送出簽名</button>
+    </div>
+
+    <button class="btn btn-admin" onclick="adminLogin()">老師管理入口</button>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, doc, setDoc, onSnapshot, collection, addDoc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyDDLO02aKJgvUa6Jk2GGslcWBhOtPHS4hE",
+        authDomain: "homework-5072f.firebaseapp.com",
+        projectId: "homework-5072f",
+        storageBucket: "homework-5072f.firebasestorage.app",
+        messagingSenderId: "927888465824",
+        appId: "1:927888465824:web:7c6abc1c2212325900cec5",
+        measurementId: "G-N9G0HZM1NT"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const today = new Date().toLocaleDateString('zh-TW').replace(/\//g, '-');
+    document.getElementById('display-date').innerText = today;
+
+    const students = [
+        "何睿信","陳柏翰","黃明璿","黃則善","黃暐翰","劉栢睿","林芊惠","段孟涵","洪煜晴","張育慈","許令霏","廖以晨","劉晏妤"
+    ];
+
+    // 初始化下拉選單
+    const select = document.getElementById('student-select');
+    students.forEach((name, index) => {
+        let opt = document.createElement('option');
+        opt.value = index + 1;
+        opt.textContent = `${index + 1}. ${name}`;
+        select.appendChild(opt);
+    });
+
+    // 初始化簽名板
+    const canvas = document.getElementById('signature-pad');
+    window.signaturePad = new SignaturePad(canvas);
+
+    // 監聽今日功課 (即時更新)
+    onSnapshot(doc(db, "homework", today), (doc) => {
+        document.getElementById('homework-display').innerText = doc.exists() ? doc.data().content : "邱老師尚未輸入今日功課";
+    });
+
+    // 家長儲存簽名
+    window.saveSignature = async () => {
+        const sid = select.value;
+        if (!sid || signaturePad.isEmpty()) return alert("請選擇學生並完成簽名");
+        
+        try {
+            await addDoc(collection(db, "responses"), {
+                date: today,
+                studentId: parseInt(sid),
+                studentName: students[sid-1],
+                comment: document.getElementById('parent-comment').value,
+                signature: signaturePad.toDataURL(),
+                timestamp: new Date()
+            });
+            alert("簽名已儲存，謝謝家長！");
+            location.reload();
+        } catch (e) { alert("儲存失敗，請檢查網路"); }
+    };
+
+    // 老師管理功能
+    window.adminLogin = async () => {
+        const pw = prompt("請輸入管理密碼：");
+        if (pw !== "0904") return alert("密碼錯誤");
+
+        const mode = prompt("請選擇功能：\n1. 輸入今日功課\n2. 查看簽名與統計");
+        
+        if (mode === "1") {
+            const content = prompt("請輸入今日功課內容：");
+            if (content) await setDoc(doc(db, "homework", today), { content });
+        } else if (mode === "2") {
+            const q = query(collection(db, "responses"), where("date", "==", today));
+            const snap = await getDocs(q);
+            let signedIds = [];
+            let detailStr = `--- 今日簽名詳情 ---\n`;
+            
+            snap.forEach(d => {
+                const data = d.data();
+                signedIds.push(data.studentId);
+                detailStr += `座號 ${data.studentId}：${data.comment || '無留言'}\n`;
+            });
+
+            const unsigned = students.map((n, i) => i + 1).filter(id => !signedIds.includes(id));
+            alert(`${detailStr}\n統計：${signedIds.length} 位已簽名\n未簽名座號：${unsigned.join(', ') || '全數完成'}`);
+        }
+    };
+</script>
+</body>
+</html>
