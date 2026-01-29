@@ -7,71 +7,48 @@
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@500;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
     <style>
-        :root { 
-            --muji-bg: #f2f0eb; 
-            --blackboard-green: #2c4c3e; 
-            --chalk-white: #fdfdfd;
-            --muji-charcoal: #333333; 
-        }
+        :root { --muji-bg: #f2f0eb; --blackboard-green: #2c4c3e; --chalk-white: #fdfdfd; --muji-charcoal: #333333; }
         * { box-sizing: border-box; }
         body { font-family: 'Noto Sans TC', sans-serif; background-color: var(--muji-bg); color: var(--muji-charcoal); margin: 0; padding: 15px; }
         .container { max-width: 600px; margin: 0 auto; background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
         
-        /* 標題區域 */
-        .header-section { text-align: center; margin-bottom: 30px; }
-        .school-info, .main-title { 
-            font-size: 2em; 
-            font-weight: 700; 
-            color: var(--muji-charcoal); 
-            display: block;
-            line-height: 1.4;
-        }
-        .main-title { color: #555; margin-top: 5px; }
+        /* 標題 */
+        .header-section { text-align: center; margin-bottom: 25px; }
+        .school-info, .main-title { font-size: 2em; font-weight: 700; color: var(--muji-charcoal); display: block; line-height: 1.4; }
         
-        /* 黑板樣式 */
+        /* 黑板優化 */
         .blackboard {
             background-color: var(--blackboard-green);
             background-image: radial-gradient(circle at 50% 50%, #3a5f4e 0%, #2c4c3e 100%);
-            border: 12px solid #5d4037; /* 木框 */
+            border: 12px solid #5d4037;
             border-radius: 4px;
             padding: 20px;
             box-shadow: inset 0 0 20px rgba(0,0,0,0.5), 0 5px 15px rgba(0,0,0,0.3);
-            margin-bottom: 20px;
-        }
-        .blackboard-header {
-            color: #ffd54f; /* 粉筆黃 */
-            font-size: 1.6em;
-            font-weight: 700;
             margin-bottom: 15px;
-            border-bottom: 2px dashed rgba(255,255,255,0.3);
-            padding-bottom: 10px;
             text-align: center;
         }
-        .homework-content {
-            color: var(--chalk-white);
-            font-size: 1.4em;
-            line-height: 1.8;
-            white-space: pre-wrap;
-            min-height: 120px;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
-        }
+        .bb-title { color: #ffd54f; font-size: 1.8em; font-weight: 700; margin-bottom: 5px; }
+        .bb-date { color: rgba(255,255,255,0.8); font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px dashed rgba(255,255,255,0.3); padding-bottom: 10px; }
+        .homework-content { color: var(--chalk-white); font-size: 1.4em; line-height: 1.8; white-space: pre-wrap; min-height: 100px; text-align: left; }
         
         .section-title { font-size: 1.3em; font-weight: 700; border-left: 6px solid var(--muji-charcoal); padding-left: 12px; margin: 25px 0 15px 0; }
         .input-group { margin-bottom: 20px; }
-        label { display: block; margin-bottom: 10px; font-weight: 700; font-size: 1.1em; }
+        label { display: block; margin-bottom: 8px; font-weight: 700; }
         select, textarea { width: 100%; padding: 14px; border: 2px solid #ddd; border-radius: 6px; font-size: 18px; font-family: inherit; }
         
-        /* 簽名板 */
         .sig-wrapper { border: 2px solid var(--muji-charcoal); background: #fff; border-radius: 6px; }
         canvas { width: 100%; height: 350px; touch-action: none; display: block; }
         
-        .btn { background-color: var(--muji-charcoal); color: white; border: none; padding: 18px; cursor: pointer; width: 100%; font-size: 20px; border-radius: 6px; font-weight: 700; margin-top: 10px; }
-        .btn-history { background: none; border: 2px solid #888; color: #888; font-size: 16px; margin-top: 15px; }
+        .btn { background-color: var(--muji-charcoal); color: white; border: none; padding: 18px; cursor: pointer; width: 100%; font-size: 20px; border-radius: 6px; font-weight: 700; }
+        .btn-history { background: none; border: 2px solid #888; color: #888; font-size: 16px; margin-top: 5px; height: 50px; }
 
-        /* 老師管理區 */
-        .admin-area { display: none; margin-top: 40px; padding: 20px; background: #f0f0f0; border-radius: 8px; border: 2px dashed #ccc; }
-        .record-card { background: white; border: 1px solid #ddd; padding: 15px; margin-bottom: 20px; border-radius: 8px; }
-        .sig-img { width: 100%; border: 1px solid #eee; margin-top: 10px; background: #fff; }
+        /* 歷史展開區 */
+        #history-box { display: none; padding: 15px; background: #f0f0f0; margin-top: 10px; border-radius: 4px; border: 1px solid #ddd; }
+        .hist-item { border-bottom: 1px solid #ccc; padding: 10px 0; }
+
+        /* 老師端管理 */
+        .admin-area { display: none; margin-top: 40px; padding: 20px; background: #eef2f3; border-radius: 8px; border: 2px solid #ccc; }
+        .edit-card { background: white; border: 1px solid #bbb; padding: 10px; margin-bottom: 10px; border-radius: 4px; }
     </style>
 </head>
 <body>
@@ -83,11 +60,12 @@
     </div>
 
     <div class="blackboard">
-        <div class="blackboard-header" id="hw-display-title">今日功課</div>
+        <div class="bb-title">今日功課</div>
+        <div class="bb-date" id="hw-date">日期讀取中...</div>
         <div id="hw-content" class="homework-content">讀取中...</div>
     </div>
-    <button class="btn btn-history" onclick="viewHistory()">📂 查看之前功課</button>
-    <div id="history-box" style="display:none; padding:15px; background:#eee; margin-top:10px; border-radius:4px;"></div>
+    <button class="btn btn-history" onclick="toggleHistory()">📂 查看之前功課 (展開/收起)</button>
+    <div id="history-box"></div>
 
     <div class="section-title">家長簽名</div>
     <div class="input-group">
@@ -96,58 +74,53 @@
     </div>
     <div class="input-group">
         <label>2. 想對老師說的話</label>
-        <textarea id="comment" rows="3" placeholder="有任何需要溝通的事項請留言"></textarea>
+        <textarea id="comment" rows="2"></textarea>
     </div>
     <div class="input-group">
-        <label>3. 家長簽名 (請在下方空白處書寫)</label>
+        <label>3. 家長簽名</label>
         <div class="sig-wrapper"><canvas id="canvas"></canvas></div>
         <button onclick="pad.clear()" style="width:100%; padding:10px; background:none; border:none; text-decoration:underline; color:#666; cursor:pointer;">清除重簽</button>
     </div>
     <button class="btn" onclick="saveData()">確認儲存並送出</button>
 
-    <button onclick="loginAdmin()" style="margin-top:100px; opacity:0.1; background:none; border:none; width:100%;">老師端管理</button>
+    <button onclick="loginAdmin()" style="margin-top:80px; opacity:0.1; background:none; border:none; width:100%;">管理</button>
 
     <div id="admin-panel" class="admin-area">
         <h3>老師管理後台</h3>
         <div class="input-group">
             <label>發布新功課</label>
-            <textarea id="hw-input" rows="4" placeholder="請輸入今日功課..."></textarea>
-            <button class="btn" style="background:#444;" onclick="updateHW()">更新黑板內容</button>
+            <textarea id="hw-input" rows="3"></textarea>
+            <button class="btn" style="background:#444;" onclick="updateHW()">發布並封存舊功課</button>
         </div>
+        
+        <div class="section-title">管理歷史功課紀錄</div>
+        <div id="admin-history-list"></div>
+        
+        <div class="section-title">今日簽名統計</div>
         <div id="stats-area"></div>
         <div id="records-list"></div>
     </div>
 </div>
 
 <script>
-    const students = [
-        {id:1, name:"何睿信"}, {id:2, name:"陳柏翰"}, {id:3, name:"黃明璿"},
-        {id:4, name:"黃則善"}, {id:5, name:"黃暐翰"}, {id:6, name:"劉栢睿"},
-        {id:7, name:"林芊惠"}, {id:8, name:"段孟涵"}, {id:9, name:"洪煜晴"},
-        {id:10, name:"張育慈"}, {id:11, name:"許令霏"}, {id:12, name:"廖以晨"},
-        {id:13, name:"劉晏妤"}
-    ];
-
+    const students = [{id:1, name:"何睿信"}, {id:2, name:"陳柏翰"}, {id:3, name:"黃明璿"}, {id:4, name:"黃則善"}, {id:5, name:"黃暐翰"}, {id:6, name:"劉栢睿"}, {id:7, name:"林芊惠"}, {id:8, name:"段孟涵"}, {id:9, name:"洪煜晴"}, {id:10, name:"張育慈"}, {id:11, name:"許令霏"}, {id:12, name:"廖以晨"}, {id:13, name:"劉晏妤"}];
     const sel = document.getElementById('student-sel');
     students.forEach(s => sel.innerHTML += `<option value="${s.id}">${s.id}. ${s.name}</option>`);
 
     const canvas = document.getElementById('canvas');
     const pad = new SignaturePad(canvas);
 
-    // 日期格式化邏輯 (包含星期)
     function getFormattedDate() {
         const now = new Date();
         const days = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
-        const dateStr = now.toLocaleDateString('zh-TW');
-        const dayStr = days[now.getDay()];
-        return `${dateStr} ${dayStr}`;
+        return `${now.toLocaleDateString('zh-TW')} ${days[now.getDay()]}`;
     }
 
-    // 初始化顯示
     let currentHW = "尚未輸入功課";
-    let historyHW = [];
+    let historyHW = []; // 格式: {id, date, content}
     let records = [];
-    document.getElementById('hw-display-title').innerText = `今日功課 (${getFormattedDate()})`;
+
+    document.getElementById('hw-date').innerText = getFormattedDate();
     document.getElementById('hw-content').innerText = currentHW;
 
     function resizeCanvas() {
@@ -160,40 +133,56 @@
     window.onresize = resizeCanvas;
     resizeCanvas();
 
-    // 老師更新功課
-    function updateHW() {
-        const val = document.getElementById('hw-input').value;
-        if(!val) return alert("請輸入功課內容");
-        historyHW.unshift({ date: getFormattedDate(), content: currentHW });
-        currentHW = val;
-        document.getElementById('hw-content').innerText = currentHW;
-        alert("黑板已更新！舊資料已存入「之前的功課」。");
-        document.getElementById('hw-input').value = '';
+    // 查看之前功課 (收合功能)
+    function toggleHistory() {
+        const box = document.getElementById('history-box');
+        if (box.style.display === 'block') {
+            box.style.display = 'none';
+        } else {
+            if(historyHW.length === 0) {
+                box.innerHTML = "目前尚無歷史紀錄";
+            } else {
+                box.innerHTML = historyHW.map(h => `<div class="hist-item"><b>${h.date}</b><br>${h.content}</div>`).join('');
+            }
+            box.style.display = 'block';
+        }
     }
 
-    // 之前功課查詢
-    function viewHistory() {
-        alert("正在讀取歷史資料...");
-        const box = document.getElementById('history-box');
-        if(historyHW.length === 0) {
-            box.innerHTML = "目前尚無歷史紀錄";
-        } else {
-            box.innerHTML = historyHW.map(h => `<div style='border-bottom:1px solid #ccc; padding:10px;'><b>${h.date}</b><br>${h.content}</div>`).join('');
+    // 老師發布新功課
+    function updateHW() {
+        const val = document.getElementById('hw-input').value;
+        if(!val) return alert("請輸入內容");
+        // 將舊的存入歷史
+        historyHW.unshift({ id: Date.now(), date: getFormattedDate(), content: currentHW });
+        currentHW = val;
+        document.getElementById('hw-content').innerText = currentHW;
+        document.getElementById('hw-input').value = '';
+        renderAdmin(); // 重新整理後台列表
+        alert("功課已更新！");
+    }
+
+    // 老師編輯歷史功課
+    function editHistory(id) {
+        const item = historyHW.find(h => h.id === id);
+        const newText = prompt("請修改功課內容：", item.content);
+        if(newText !== null) {
+            item.content = newText;
+            renderAdmin();
         }
-        box.style.display = 'block';
+    }
+
+    // 老師刪除歷史功課
+    function deleteHistory(id) {
+        if(confirm("確定要刪除這筆歷史紀錄嗎？")) {
+            historyHW = historyHW.filter(h => h.id !== id);
+            renderAdmin();
+        }
     }
 
     function saveData() {
         const sid = sel.value;
         if(!sid || pad.isEmpty()) return alert("請選取座號並簽名");
-        records.push({
-            id: Date.now(),
-            name: students.find(s => s.id == sid).name,
-            sid: sid,
-            comment: document.getElementById('comment').value,
-            sig: pad.toDataURL(),
-            time: new Date().toLocaleTimeString()
-        });
+        records.push({ id: Date.now(), name: students.find(s => s.id == sid).name, sid: sid, comment: document.getElementById('comment').value, sig: pad.toDataURL(), time: new Date().toLocaleTimeString() });
         alert("簽名儲存成功！");
         pad.clear();
     }
@@ -206,25 +195,31 @@
     }
 
     function renderAdmin() {
+        // 渲染統計
         const signedIds = records.map(r => parseInt(r.sid));
         const unsigned = students.filter(s => !signedIds.includes(s.id));
-        document.getElementById('stats-area').innerHTML = `
-            <div style="background:#fff1f1; padding:15px; border-radius:8px; margin:20px 0; border:1px solid #f5c6cb;">
-                <strong>未簽名名單：</strong><br>${unsigned.length > 0 ? unsigned.map(s => s.name).join('、') : '全班簽名完成'}
+        document.getElementById('stats-area').innerHTML = `<div style="background:#fff1f1; padding:10px; border-radius:4px;">未簽名：${unsigned.length > 0 ? unsigned.map(s => s.name).join('、') : '無'}</div>`;
+
+        // 渲染歷史管理
+        const hList = document.getElementById('admin-history-list');
+        hList.innerHTML = historyHW.length === 0 ? "無歷史紀錄" : historyHW.map(h => `
+            <div class="edit-card">
+                <small>${h.date}</small><br>
+                <div style="margin:5px 0;">${h.content}</div>
+                <button onclick="editHistory(${h.id})">編輯</button>
+                <button onclick="deleteHistory(${h.id})" style="color:red;">刪除</button>
             </div>
-        `;
-        const list = document.getElementById('records-list');
-        list.innerHTML = '';
-        records.forEach(r => {
-            list.innerHTML += `
-                <div class="record-card">
-                    <strong>${r.sid}. ${r.name} (${r.time})</strong>
-                    <p>留言：${r.comment || '無'}</p>
-                    <img src="${r.sig}" class="sig-img">
-                    <button style="color:red; background:none; border:none; cursor:pointer;" onclick="this.parentElement.remove()">[刪除紀錄]</button>
-                </div>
-            `;
-        });
+        `).join('');
+
+        // 渲染家長簽名
+        const rList = document.getElementById('records-list');
+        rList.innerHTML = records.map(r => `
+            <div style="background:white; margin-top:10px; padding:10px; border-radius:4px; border:1px solid #ddd;">
+                <b>${r.sid}. ${r.name} (${r.time})</b><br>留言：${r.comment || '無'}<br>
+                <img src="${r.sig}" style="width:100%; border:1px solid #eee;">
+                <button onclick="records=records.filter(x=>x.id!=${r.id});renderAdmin();" style="color:red; background:none; border:none; cursor:pointer; font-size:12px;">刪除簽名</button>
+            </div>
+        `).join('');
     }
 </script>
 </body>
