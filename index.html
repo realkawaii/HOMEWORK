@@ -62,7 +62,7 @@
                 else if (day === 0) { start.setDate(start.getDate() - 2); start = setTime(start, 16); }
                 else if (day === 1) { start.setDate(start.getDate() - 3); start = setTime(start, 16); }
                 const monday = new Date(start);
-                monday.setDate(start.getDate() + (day === 5 ? 3 : day === 6 ? 2 : day === 0 ? 1 : 0));
+                monday.setDate(start.getDate() + 3);
                 end = setTime(monday, 7);
             } else {
                 if (now.getHours() >= 16) { 
@@ -112,7 +112,7 @@
                     name: students.find(s => s.id == sid).name,
                     comment: document.getElementById('comment').value,
                     sig: pad.toDataURL(),
-                    time: new Date().toLocaleString(), // 存入完整時間字串以便查看
+                    time: new Date().toLocaleString('zh-TW'),
                     timestamp: Date.now()
                 });
                 alert("儲存成功！");
@@ -143,7 +143,8 @@
             if (pw === "0904") {
                 adminPanel.style.display = 'block';
                 teacherExtra.style.display = 'block';
-                initAdminListeners();
+                window.initAdminListeners(); // 確保密碼正確後調用
+                adminPanel.scrollIntoView({ behavior: 'smooth' });
             } else if (pw === "0214") {
                 adminPanel.style.display = 'block';
                 teacherExtra.style.display = 'none';
@@ -153,9 +154,12 @@
             }
         };
 
-        function initAdminListeners() {
+        window.initAdminListeners = function() {
+            // 監聽歷史作業
             onSnapshot(query(collection(db, "history_homework"), orderBy("timestamp", "desc")), (snap) => {
-                document.getElementById('admin-history-manage').innerHTML = snap.docs.map(d => `
+                const container = document.getElementById('admin-history-manage');
+                if(!container) return;
+                container.innerHTML = snap.docs.map(d => `
                     <div class="edit-card">
                         <small>${d.data().date}</small>
                         <textarea id="edit-${d.id}" style="width:100%; margin:5px 0;">${d.data().content}</textarea>
@@ -165,43 +169,46 @@
                 `).join('');
             });
 
+            // 監聽簽名與統計
             onSnapshot(query(collection(db, "signatures"), orderBy("timestamp", "desc")), (snap) => {
                 const range = getStatisticsRange();
                 const allData = snap.docs.map(d => ({id: d.id, ...d.data()}));
                 
-                // 1. 統計區域：僅篩選目前時段
+                // 統計區域：篩選目前時段
                 const statsRecords = allData.filter(r => r.timestamp >= range.start && r.timestamp < range.end);
                 const signedIds = statsRecords.map(r => parseInt(r.sid));
                 const unsigned = students.filter(s => !signedIds.includes(s.id));
 
-                const rangeDisplay = `${new Date(range.start).toLocaleString([], {month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'})} ~ 結案`;
+                const rangeDisplay = `${new Date(range.start).toLocaleString([], {month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'})} 起`;
                 
-                document.getElementById('stats-area').innerHTML = `
-                    <div style="background:#e3f2fd; padding:10px; border-radius:4px; margin-bottom:10px; font-size:0.85em; border-left:4px solid #2196F3;">
-                        <b>目前統計區間：</b> ${rangeDisplay}
-                    </div>
-                    <div style="background:#fff1f1; padding:10px; border-radius:4px; border-left:4px solid #f44336;">
-                        <b>時段內未簽名 (${unsigned.length}人)：</b><br>
-                        ${unsigned.length > 0 ? unsigned.map(s => s.name).join('、') : '✨ 全班已完成簽名'}
-                    </div>`;
+                const statsArea = document.getElementById('stats-area');
+                if(statsArea) {
+                    statsArea.innerHTML = `
+                        <div style="background:#e3f2fd; padding:10px; border-radius:4px; margin-bottom:10px; font-size:0.85em; border-left:4px solid #2196F3;">
+                            <b>統計時段：</b> ${rangeDisplay}
+                        </div>
+                        <div style="background:#fff1f1; padding:10px; border-radius:4px; border-left:4px solid #f44336;">
+                            <b>未簽名 (${unsigned.length}人)：</b><br>
+                            ${unsigned.length > 0 ? unsigned.map(s => s.name).join('、') : '✨ 全班已簽名'}
+                        </div>`;
+                }
 
-                // 2. 顯示清單：完整保留（不加過濾），讓老師看得到非時段內的簽名
-                document.getElementById('records-list').innerHTML = allData.map(d => {
-                    // 標記是否為「非時段內」簽名
-                    const isOutside = (d.timestamp < range.start || d.timestamp >= range.end);
-                    const tag = isOutside ? '<span style="color:#999; font-size:12px;">[非本次統計時段]</span>' : '';
-                    
-                    return `
-                    <div class="record-card" style="${isOutside ? 'opacity:0.7; border-style:dashed;' : ''}">
-                        <b>${d.sid}. ${d.name}</b> ${tag}<br>
-                        <small style="color:#888;">${d.time}</small><br>
-                        留言：${d.comment || '無'}<br>
-                        <img src="${d.sig}" style="width:100%; border:1px solid #eee; background:#fff; margin-top:5px;">
-                        <button onclick="window.deleteSig('${d.id}')" style="color:red; background:none; border:none; cursor:pointer; font-size:12px;">[刪除此紀錄]</button>
-                    </div>`;
-                }).join('');
+                const recordsList = document.getElementById('records-list');
+                if(recordsList) {
+                    recordsList.innerHTML = allData.map(d => {
+                        const isOutside = (d.timestamp < range.start || d.timestamp >= range.end);
+                        return `
+                        <div class="record-card" style="${isOutside ? 'opacity:0.6; border-style:dashed;' : ''}">
+                            <b>${d.sid}. ${d.name}</b> ${isOutside ? '<small style="color:#999;">[非本次統計]</small>' : ''}<br>
+                            <small style="color:#888;">${d.time}</small><br>
+                            留言：${d.comment || '無'}<br>
+                            <img src="${d.sig}" style="width:100%; border:1px solid #eee; background:#fff; margin-top:5px;">
+                            <button onclick="window.deleteSig('${d.id}')" style="color:red; background:none; border:none; cursor:pointer; font-size:12px;">[刪除紀錄]</button>
+                        </div>`;
+                    }).join('');
+                }
             });
-        }
+        };
 
         window.saveEditHW = async (id) => {
             const newContent = document.getElementById(`edit-${id}`).value;
