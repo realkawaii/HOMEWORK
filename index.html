@@ -213,18 +213,62 @@
                         <p style="margin-top:8px; font-size:1.1em;">${unsigned.length > 0 ? unsigned.map(s => s.name).join('、') : '✨ 全班已簽名'}</p>
                     </div>`;
 
-                document.getElementById('records-list').innerHTML = allData.map(d => {
+                // --- 修改處：增加批量刪除的控制區與 Checkbox ---
+                const batchControlHTML = `
+                    <div style="margin-bottom: 10px; padding: 10px; background: #eee; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
+                        <label style="cursor:pointer; display:flex; align-items:center; gap:5px; margin:0;">
+                            <input type="checkbox" id="selectAllSigs" onchange="window.toggleAllSigs(this)" style="transform: scale(1.3);"> 
+                            全選
+                        </label>
+                        <button onclick="window.deleteSelectedSigs()" style="background: #d32f2f; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold;">🗑️ 刪除選取項目</button>
+                    </div>
+                `;
+
+                const listHTML = allData.map(d => {
                     const isOutside = (d.timestamp < range.start || d.timestamp >= range.end);
                     return `
                     <div class="record-card" style="${isOutside ? 'opacity:0.6; border-style:dashed; background:#fafafa;' : 'border-left:4px solid #4caf50;'}">
-                        <b>${d.sid}. ${d.name}</b> ${isOutside ? '<span style="color:#999;">[非本次統計]</span>' : ''}<br>
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <b>${d.sid}. ${d.name}</b>
+                            <input type="checkbox" class="sig-checkbox" value="${d.id}" style="transform: scale(1.5); cursor: pointer;">
+                        </div>
+                        ${isOutside ? '<span style="color:#999; font-size:0.8em;">[非本次統計]</span><br>' : ''}
                         <small style="color:#888;">${d.time}</small><br>
                         <div style="margin:5px 0; color:#444;">留言：${d.comment || '無'}</div>
                         <img src="${d.sig}" style="width:100%; border:1px solid #eee; background:#fff; margin-top:5px;">
-                        <button onclick="window.deleteSig('${d.id}')" style="color:red; background:none; border:none; cursor:pointer; font-size:12px; margin-top:10px;">[刪除此筆紀錄]</button>
+                        <div style="text-align:right; margin-top:5px;">
+                            <button onclick="window.deleteSig('${d.id}')" style="color:#666; background:none; border:none; cursor:pointer; font-size:12px; text-decoration:underline;">個別刪除</button>
+                        </div>
                     </div>`;
                 }).join('');
+
+                document.getElementById('records-list').innerHTML = batchControlHTML + listHTML;
             });
+        };
+
+        // --- 新增：批量操作功能 ---
+        window.toggleAllSigs = (source) => {
+            const checkboxes = document.querySelectorAll('.sig-checkbox');
+            checkboxes.forEach(cb => cb.checked = source.checked);
+        };
+
+        window.deleteSelectedSigs = async () => {
+            const checkedBoxes = document.querySelectorAll('.sig-checkbox:checked');
+            if (checkedBoxes.length === 0) return alert("請先選取要刪除的項目");
+            
+            if (!confirm(`⚠️ 確定要永久刪除選取的 ${checkedBoxes.length} 筆簽名嗎？\n此動作無法復原！`)) return;
+
+            try {
+                // 使用 Promise.all 平行刪除
+                const deletePromises = Array.from(checkedBoxes).map(cb => deleteDoc(doc(db, "signatures", cb.value)));
+                await Promise.all(deletePromises);
+                alert("刪除成功！");
+                // 刪除後自動取消全選狀態
+                const selectAllBox = document.getElementById('selectAllSigs');
+                if(selectAllBox) selectAllBox.checked = false;
+            } catch (e) {
+                alert("刪除失敗：" + e.message);
+            }
         };
 
         window.saveEditHW = async (id) => {
