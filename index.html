@@ -124,10 +124,20 @@
             return { start, end };
         }
 
+        let currentHomeworkContent = ""; // 暫存目前的功課內容
+
         onSnapshot(doc(db, "configs", "today_homework"), (docSnap) => {
             if (docSnap.exists()) {
-                document.getElementById('hw-content').innerText = docSnap.data().content;
+                currentHomeworkContent = docSnap.data().content || "";
+                document.getElementById('hw-content').innerText = currentHomeworkContent;
                 document.getElementById('hw-date').innerText = docSnap.data().date || getFormattedDate();
+                
+                // 如果後台是開啟的，且輸入框是空的（或者正在編輯），這裡可以選擇是否即時更新輸入框
+                // 為了方便，我們設定：當後台開啟時，如果輸入框沒有被修改過，就自動填入最新值
+                const inputArea = document.getElementById('hw-input');
+                if (inputArea && inputArea.value === "") {
+                     inputArea.value = currentHomeworkContent;
+                }
             }
         });
 
@@ -164,7 +174,8 @@
                     content: val,
                     date: getFormattedDate()
                 });
-                document.getElementById('hw-input').value = '';
+                // 更新後不需要清空，方便繼續修改
+                // document.getElementById('hw-input').value = ''; 
                 alert("功課已更新！");
             } catch(e) { alert("更新失敗"); }
         };
@@ -172,13 +183,24 @@
         window.loginAdmin = () => {
             const pw = prompt("請輸入管理密碼：");
             if (pw === "0904") {
+                // 教師完整後台
                 document.getElementById('admin-panel').style.display = 'block';
                 document.getElementById('teacher-extra').style.display = 'block';
+                
+                // 自動帶入目前功課內容到輸入框
+                document.getElementById('hw-input').value = currentHomeworkContent;
+
                 window.initAdminData(); 
                 document.getElementById('admin-panel').scrollIntoView({ behavior: 'smooth' });
             } else if (pw === "0214") {
+                // 學生幹部後台 (僅能輸入功課)
                 document.getElementById('admin-panel').style.display = 'block';
-                document.getElementById('teacher-extra').style.display = 'none';
+                document.getElementById('teacher-extra').style.display = 'none'; // 隱藏統計與歷史
+                
+                // 自動帶入目前功課內容到輸入框
+                document.getElementById('hw-input').value = currentHomeworkContent;
+                
+                document.getElementById('admin-panel').scrollIntoView({ behavior: 'smooth' });
             } else {
                 alert("密碼錯誤！");
             }
