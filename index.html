@@ -132,8 +132,7 @@
                 document.getElementById('hw-content').innerText = currentHomeworkContent;
                 document.getElementById('hw-date').innerText = docSnap.data().date || getFormattedDate();
                 
-                // 如果後台是開啟的，且輸入框是空的（或者正在編輯），這裡可以選擇是否即時更新輸入框
-                // 為了方便，我們設定：當後台開啟時，如果輸入框沒有被修改過，就自動填入最新值
+                // 自動帶入輸入框
                 const inputArea = document.getElementById('hw-input');
                 if (inputArea && inputArea.value === "") {
                      inputArea.value = currentHomeworkContent;
@@ -161,23 +160,37 @@
             } catch(e) { alert("儲存失敗"); }
         };
 
+        // --- 修改後的 UpdateHW 邏輯 ---
         window.updateHW = async () => {
             const val = document.getElementById('hw-input').value;
             if(!val) return alert("請輸入內容");
+            
+            // 取得目前黑板上的日期與內容
+            const currentBoardDate = document.getElementById('hw-date').innerText;
+            const currentBoardContent = document.getElementById('hw-content').innerText;
+            const newDate = getFormattedDate();
+
             try {
-                await addDoc(collection(db, "history_homework"), {
-                    date: document.getElementById('hw-date').innerText,
-                    content: document.getElementById('hw-content').innerText,
-                    timestamp: Date.now()
-                });
+                // 邏輯：只有當「黑板上的日期」與「今天要設定的日期」不同時，才把黑板上的舊內容存入歷史
+                if (currentBoardDate !== newDate && currentBoardDate !== "載入中...") {
+                    await addDoc(collection(db, "history_homework"), {
+                        date: currentBoardDate,
+                        content: currentBoardContent,
+                        timestamp: Date.now()
+                    });
+                }
+
+                // 無論如何，都更新「今日功課」為最新的輸入內容
                 await setDoc(doc(db, "configs", "today_homework"), {
                     content: val,
-                    date: getFormattedDate()
+                    date: newDate
                 });
-                // 更新後不需要清空，方便繼續修改
-                // document.getElementById('hw-input').value = ''; 
+                
                 alert("功課已更新！");
-            } catch(e) { alert("更新失敗"); }
+            } catch(e) { 
+                console.error(e);
+                alert("更新失敗"); 
+            }
         };
 
         window.loginAdmin = () => {
@@ -186,20 +199,14 @@
                 // 教師完整後台
                 document.getElementById('admin-panel').style.display = 'block';
                 document.getElementById('teacher-extra').style.display = 'block';
-                
-                // 自動帶入目前功課內容到輸入框
                 document.getElementById('hw-input').value = currentHomeworkContent;
-
                 window.initAdminData(); 
                 document.getElementById('admin-panel').scrollIntoView({ behavior: 'smooth' });
             } else if (pw === "0214") {
-                // 學生幹部後台 (僅能輸入功課)
+                // 學生幹部後台
                 document.getElementById('admin-panel').style.display = 'block';
-                document.getElementById('teacher-extra').style.display = 'none'; // 隱藏統計與歷史
-                
-                // 自動帶入目前功課內容到輸入框
+                document.getElementById('teacher-extra').style.display = 'none'; 
                 document.getElementById('hw-input').value = currentHomeworkContent;
-                
                 document.getElementById('admin-panel').scrollIntoView({ behavior: 'smooth' });
             } else {
                 alert("密碼錯誤！");
@@ -235,7 +242,6 @@
                         <p style="margin-top:8px; font-size:1.1em;">${unsigned.length > 0 ? unsigned.map(s => s.name).join('、') : '✨ 全班已簽名'}</p>
                     </div>`;
 
-                // --- 修改處：增加批量刪除的控制區與 Checkbox ---
                 const batchControlHTML = `
                     <div style="margin-bottom: 10px; padding: 10px; background: #eee; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
                         <label style="cursor:pointer; display:flex; align-items:center; gap:5px; margin:0;">
@@ -268,7 +274,6 @@
             });
         };
 
-        // --- 新增：批量操作功能 ---
         window.toggleAllSigs = (source) => {
             const checkboxes = document.querySelectorAll('.sig-checkbox');
             checkboxes.forEach(cb => cb.checked = source.checked);
@@ -281,11 +286,9 @@
             if (!confirm(`⚠️ 確定要永久刪除選取的 ${checkedBoxes.length} 筆簽名嗎？\n此動作無法復原！`)) return;
 
             try {
-                // 使用 Promise.all 平行刪除
                 const deletePromises = Array.from(checkedBoxes).map(cb => deleteDoc(doc(db, "signatures", cb.value)));
                 await Promise.all(deletePromises);
                 alert("刪除成功！");
-                // 刪除後自動取消全選狀態
                 const selectAllBox = document.getElementById('selectAllSigs');
                 if(selectAllBox) selectAllBox.checked = false;
             } catch (e) {
