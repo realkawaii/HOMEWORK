@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>大吉國中 204 線上聯絡簿</title>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@500;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
     
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -37,7 +37,14 @@
         // --- 簽名視窗邏輯 ---
         const sigOverlay = document.getElementById('sig-overlay');
         const canvas = document.getElementById('canvas');
-        const pad = new SignaturePad(canvas);
+        
+        // 初始化簽名板
+        const pad = new SignaturePad(canvas, {
+            minWidth: 3,
+            maxWidth: 5,
+            penColor: 'rgb(0, 0, 0)'
+        });
+        
         const previewImg = document.getElementById('sig-preview');
         let isEraser = false;
 
@@ -45,6 +52,17 @@
             sigOverlay.style.display = 'flex';
             resizeCanvas();
             document.body.style.overflow = 'hidden'; 
+            
+            // 修正：每次打開時重置為畫筆模式，避免卡在橡皮擦
+            isEraser = false;
+            pad.compositeOperation = 'source-over';
+            const btn = document.getElementById('eraser-btn');
+            btn.style.background = '#666';
+            btn.textContent = '🧽 橡皮擦';
+            
+            // 重置粗細
+            const slider = document.querySelector('input[type="range"]');
+            window.changeWidth(slider.value);
         };
 
         window.closeSignature = (save) => {
@@ -60,20 +78,32 @@
         window.toggleEraser = () => {
             isEraser = !isEraser;
             const btn = document.getElementById('eraser-btn');
+            const slider = document.querySelector('input[type="range"]');
+            
             if (isEraser) {
+                // 切換為橡皮擦
                 pad.compositeOperation = 'destination-out';
                 btn.style.background = '#ff4444';
                 btn.textContent = '✏️ 切換畫筆';
+                // 自動加粗橡皮擦，方便使用
+                pad.minWidth = 10;
+                pad.maxWidth = 20;
             } else {
+                // 切換回畫筆
                 pad.compositeOperation = 'source-over';
                 btn.style.background = '#666';
                 btn.textContent = '🧽 橡皮擦';
+                // 恢復原本設定的粗細
+                window.changeWidth(slider.value);
             }
         };
 
         window.changeWidth = (val) => {
-            pad.minWidth = parseFloat(val);
-            pad.maxWidth = parseFloat(val) + 2;
+            // 如果在橡皮擦模式下調整粗細，不影響畫筆設定，或者直接忽略
+            if (!isEraser) {
+                pad.minWidth = parseFloat(val);
+                pad.maxWidth = parseFloat(val) + 2;
+            }
         };
 
         function resizeCanvas() {
@@ -81,7 +111,7 @@
             canvas.width = canvas.offsetWidth * ratio;
             canvas.height = canvas.offsetHeight * ratio;
             canvas.getContext("2d").scale(ratio, ratio);
-            pad.clear();
+            pad.clear(); // 清除畫布以適應新尺寸
         }
 
         function getFormattedDate() {
@@ -160,7 +190,7 @@
             } catch(e) { alert("儲存失敗"); }
         };
 
-        // --- 修改後的 UpdateHW 邏輯 ---
+        // --- UpdateHW 邏輯 ---
         window.updateHW = async () => {
             const val = document.getElementById('hw-input').value;
             if(!val) return alert("請輸入內容");
